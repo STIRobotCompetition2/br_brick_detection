@@ -1,0 +1,5 @@
+<launch>
+    <node name="brick_detection" exec="yolo_brick_detection" pkg="br_brick_detection" output="screen">
+         <param from="$(find-pkg-share br_brick_detection)/config/brick_detection.yaml"/>
+    </node>
+</launch>
