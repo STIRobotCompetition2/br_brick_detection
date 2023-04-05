@@ -32,9 +32,6 @@ class YoloDetector(Node):
         model_name = self.get_parameter("model_name").get_parameter_value().string_value
         yolov5_dir = self.get_parameter("yolov5_dir").get_parameter_value().string_value
 
-
-
-
         self.pub_annotated_images = self.get_parameter_or("pub_annotated_images", True)
 
         self.cv_bridge = CvBridge()
@@ -58,29 +55,69 @@ class YoloDetector(Node):
 
     def image_callback(self, msg:Image):
         valid_image = self.preprocess_image(msg)
-        yolo_output = self.inference(valid_image)
-        if self.pub_annotated_images:
-            image_annotated = self.annotate(valid_image, yolo_output)
-        else:
-            image_annotated = None
-        self.publish(yolo_output, image_annotated)
+        image_annotated = self.inference(valid_image)
+        
+        self.publish(None, image_annotated)
         self.get_logger().debug("Yolo Brick Detection processed image")
 
-    def preprocess_image(self, input:Image):
+    def preprocess_image(self, input:Image): 
         input_as_numpy = self.cv_bridge.imgmsg_to_cv2(input, desired_encoding='passthrough')
-        if not (input_as_numpy.shape[0] == 320 and input_as_numpy.shape[1] == 320):
-            self.get_logger().warn("Yolo Brick Detection got image of resolution {} but requires 320x320. Cropping it ...".format(input_as_numpy.shape[0:2]))
-            square_side_length = np.min(input_as_numpy.shape[0:2])
-            return cv2.resize(input_as_numpy[:square_side_length,:square_side_length,:], dsize=(320, 320,), interpolation=cv2.INTER_CUBIC)
+        # if not (input_as_numpy.shape[0] == 320 and input_as_numpy.shape[1] == 320):
+        #     self.get_logger().warn("Yolo Brick Detection got image of resolution {} but requires 320x320. Cropping it ...".format(input_as_numpy.shape[0:2]))
+        #     square_side_length = np.min(input_as_numpy.shape[0:2])
+        #     return cv2.resize(input_as_numpy[:square_side_length,:square_side_length,:], dsize=(320, 320,), interpolation=cv2.INTER_CUBIC)
         return input_as_numpy
 
     def inference(self, input:np.ndarray):
-        return self.model(input, size=320)
+        input = input[:720,:1280,:]
+        output = np.zeros(input.shape[0:2], dtype=np.uint8)
+        print(input.shape)
+        for x_idx in range(4):
+            for y_idx in range(2):
+                temp = input[320 * y_idx:320 * (y_idx + 1), 320 * x_idx:320 * (x_idx + 1)]
+                yolo_output = self.model(temp, size=320)
+                for detection in yolo_output.xyxy[0]:
+                    if detection[4] < 0.3: continue
+                    corners = detection[0:4].tolist()
+                    corners = [int(val) for val in corners]
+                    cv2.rectangle(temp, corners[0:2], corners[2:4], [255,255,0],thickness=5)
+                    input[320 * y_idx:320 * (y_idx + 1), 320 * x_idx:320 * (x_idx + 1)] = temp
+                    corners[1] += 320 * y_idx
+                    corners[3] += 320 * y_idx
+                    corners[0] += 320 * x_idx
+                    corners[2] += 320 * x_idx
+
+                    cv2.rectangle(output, corners[0:2], corners[2:4], 255,-1)
+        for x_idx in range(3):
+            for y_idx in range(1):
+                temp = input[160+320 * y_idx:160+320 * (y_idx + 1), 160+320 * x_idx:160+320 * (x_idx + 1)]
+                yolo_output = self.model(temp, size=320)
+                for detection in yolo_output.xyxy[0]:
+                    if detection[4] < 0.3: continue
+                    corners = detection[0:4].tolist()
+                    corners = [int(val) for val in corners]
+                    cv2.rectangle(temp, corners[0:2], corners[2:4], [255,255,0],thickness=5)
+                    input[160+320 * y_idx:160+320 * (y_idx + 1), 160+320 * x_idx:160+320 * (x_idx + 1)] = temp
+                    corners[1] += 160+320 * y_idx
+                    corners[3] += 160+320 * y_idx
+                    corners[0] += 160+320 * x_idx
+                    corners[2] += 160+320 * x_idx
+                    cv2.rectangle(output, corners[0:2], corners[2:4], 255,-1)
+        output = cv2.morphologyEx(output, cv2.MORPH_DILATE, (5,5,))
+        contours, hierarchy = cv2.findContours(output,cv2.RETR_LIST,cv2.CHAIN_APPROX_NONE)[-2:]
+        idx =0 
+        for cnt in contours:
+            idx += 1
+            x,y,w,h = cv2.boundingRect(cnt)
+            input = cv2.rectangle(input, [x,y],[x+w, y+h], [255,0,255], thickness=3)
+            #cv2.rectangle(im,(x,y),(x+w,y+h),(200,0,0),2)
+    
+        return input
     
     def annotate(self, input:np.ndarray, yolo_output):
         output = copy.deepcopy(input)
         for detection in yolo_output.xyxy[0]:
-            if detection[4] < 0.1: continue
+            if detection[4] < 0.7: continue
             corners = detection[0:4].tolist()
             corners = [int(val) for val in corners]
             cv2.rectangle(output, pt1=corners[0:2], pt2=corners[2:4], color=[255,0,0,255],thickness=3)

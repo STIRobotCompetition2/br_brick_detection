@@ -2,7 +2,7 @@ brick_detection:
   ros__parameters:
     google_drive_folder_url: "TODO"
     model_name: "best-int8_edgetpu.tflite"
-    model_dir: "/home/svenbecker/Documents/EPFL/Semester_Project/repositories/yolov5/test/src"
+    model_dir: "/home/svenbecker/Documents/EPFL/Semester_Project/repositories/yolov5/runs/train/exp20/weights"
     yolov5_dir: "/home/svenbecker/Documents/EPFL/Semester_Project/repositories/yolov5"
     pub_annotated_images: True
     input_image_topic: "/image"
