@@ -2,11 +2,11 @@ brick_detection:
   ros__parameters:
     google_drive_folder_url: "TODO"
     model_name: "best-int8_edgetpu.tflite"
-    model_dir: "/home/svenbecker/Documents/EPFL/Semester_Project/repositories/yolov5/runs/train/exp20/weights"
-    yolov5_dir: "/home/svenbecker/Documents/EPFL/Semester_Project/repositories/yolov5"
+    model_dir: "/home/budget_roomba_2/sven_space/ros_ws/src/br_brick_detection/br_brick_detection/model"
+    yolov5_dir: "/home/budget_roomba_2/sven_space/pycoral/yolov5"
     pub_annotated_images: True
-    input_image_topic: "/image"
-    output_image_topic: "/image_out"
+    input_image_topic: "/camera/image"
+    output_image_topic: "/brick_detection/bounding_boxes/compressed"
 
 
 
